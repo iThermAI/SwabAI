@@ -8,7 +8,7 @@ ENV PYTHONUNBUFFERED=1 \
 COPY config/requirements.txt /tmp/
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recomends build-essential cmake && \
+    apt-get install -y --no-install-recommends build-essential cmake && \
     rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
