@@ -1,4 +1,10 @@
 # Swab AI
+![Travis (.com)](https://img.shields.io/travis/com/ithermai/swabai)
+[![AGPL License](https://img.shields.io/badge/license-AGPL-blue.svg)](http://www.gnu.org/licenses/agpl-3.0)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/ithermai/swabai) 
+![Lines of code](https://img.shields.io/tokei/lines/github/ithermai/swabai)
+![GitHub repo size](https://img.shields.io/github/repo-size/ithermai/swabai)
+![GitHub last commit](https://img.shields.io/github/last-commit/ithermai/swabai)
 
 This code finds bounding box of a single human mouth. In comparison to other face segmentation methods, it is relatively insusceptible to open mouth conditions, e.g., yawning, surgical robots, etc. The mouth coordinates are found in a more certified way using two independent algorithms. Therefore, the algorithm can be used in more sensitive applications.
 
