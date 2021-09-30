@@ -1,7 +1,7 @@
-from FaceInference import infere as face_infere
-from FaceInference import load_model as face_load_model
+from face_detection import infere as face_infere
+from face_detection import load_model as face_load_model
 import dlib
-from util import (
+from util.util import (
     resclace_coords,
     mask_bb,
     coords_or,
@@ -11,7 +11,7 @@ from util import (
     check_overlap,
     landmarks2numpy,
 )
-from model_sync import sync_model
+from util.model_sync import sync_model
 import numpy as np
 import torch
 import cv2
@@ -132,7 +132,7 @@ def Get_BoundingBox(input_image, show=False, save=False, live=False):
     if isinstance(face_coord, int):
         if not face_coord:  # no face coordinations
             print("\nFrame Dropped")
-            return 0
+            return ()
 
     mouth_coords = GetMouth(face_image, face_coord, live=live)
 
@@ -140,14 +140,14 @@ def Get_BoundingBox(input_image, show=False, save=False, live=False):
     if isinstance(mouth_coords, int):
         if not mouth_coords:  # no mouth coordinations
             print("\nFrame Dropped")
-            return 0
+            return ()
 
     # check overlap between bbox and landmarks
     if not check_overlap(
         mouth_coords, face_mouth_coords, length_thresh=0.40, thresh_x=0.05
     ):
         print("\nFrame Dropped")
-        return 0
+        return ()
 
     # rescale coordinations
     mouth_coords = resclace_coords(mouth_coords, face_image.shape, input_image.shape)
