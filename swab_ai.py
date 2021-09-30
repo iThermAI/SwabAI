@@ -192,7 +192,9 @@ def Get_BoundingBox(input_image, show=False, save=False, live=False):
 
 
 ############################ ▼ Load Model for first time ▼ ############################
+print("Loading an empty frame for the first time -> should be dropped", end="\r")
 Get_BoundingBox(np.zeros((640, 480)))  # initial loading is slower
+print("All models are loaded now -> Ready ...\n")
 ############################ ▲ Load Model for first time ▲ ############################
 
 if __name__ == "__main__":  # not suited for dockerized run
