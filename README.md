@@ -1,5 +1,4 @@
 # Swab AI
-![Docker Automated build](https://img.shields.io/docker/automated/ajahansh/faceai)
 ![Travis (.com)](https://img.shields.io/travis/com/ithermai/swabai)
 [![AGPL License](https://img.shields.io/badge/license-AGPL-blue.svg)](http://www.gnu.org/licenses/agpl-3.0)
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/ithermai/swabai) 
