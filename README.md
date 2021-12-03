@@ -79,4 +79,4 @@ mv "yolov5s-exp47.plan" "../../model_face/weights/yolov5s-exp47.plan"
 cd ..
 mv face_detection_trt.py  swab_ai_trt.py tensorrt_com.py yolo_trt_model.py ..
 ```
-To use TensorRT, import swab_ai_trt instead of swab_ai
+To use TensorRT, import `swab_ai_trt` instead of `swab_ai`
