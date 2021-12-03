@@ -84,10 +84,11 @@ def stopwatch(message):
 
 
 def sync_model():
-    TOKEN = "5hyj23rAXg4AAAAAAAAAAV7tAtMh0LYb3gSy170WzO4W3ZDcrVALOPvkl9KmfNZw"
+    TOKEN = "dVFNIzp014UAAAAAAAAAAYl1rxQk4vT3SXxPgyyZnBoa2m24ywGzBSQ5JvgPP0Xm"
     dbx = dropbox.Dropbox(TOKEN)
     try:
         sync_folder(dbx, "/model_face", ".")
         sync_folder(dbx, "/model_mouth", ".")
+        sync_folder(dbx, "/TensorRT", ".")
     except:
         print("\033[38;2;255;0;0m", "model weights synchronization faild.", "\033[0m")

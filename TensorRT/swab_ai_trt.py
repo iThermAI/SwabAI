@@ -1,5 +1,7 @@
-from face_detection import infere as face_infere
-from face_detection import load_model as face_load_model
+import torch
+from face_detection_trt import infere as face_infere
+from face_detection_trt import load_model as face_load_model
+
 import dlib
 from util.util import (
     resclace_coords,
@@ -13,19 +15,18 @@ from util.util import (
 )
 from util.model_sync import sync_model
 import numpy as np
-import torch
 import cv2
 import time
 
 # Model Weights Synchronization
-sync_model()
+# sync_model()
 
 ############################## ▼ Face Inference Setup ▼ ###############################
 device = "cuda" if torch.cuda.is_available() else "cpu"
 if device == "cpu":
     print("No GPU is available, using cpu")
 face_device = torch.device(device)
-face_model = face_load_model("model_face/weights/yolov5s-exp47.pt", face_device)
+face_model = face_load_model("model_face/weights/yolov5s-exp47.plan", face_device)
 ############################## ▲ Face Inference Setup ▲ ###############################
 
 ############################## ▼ Mouth Inference Setup ▼ ##############################
@@ -35,6 +36,7 @@ Mouth_predictor = dlib.shape_predictor(
 ############################## ▲ Mouth Inference Setup ▲ ##############################
 new_time = 0
 prev_time = 0
+not_detected = 0
 prev_frame = None
 prev_or_coords = None
 prev_face_mouth_coords = None
@@ -47,7 +49,14 @@ def GetFace(input_image, show=False, save=False, live=False):
     return tuple of face image, face bounding box coordinations and mouth landmarks that detected by face detection algorthim (face_image, ((x0, y0), (x1, y1)), ((x0, y0), (x1, y1)))"""
 
     # inference of face detection
-    coords, face_mouth_coords = face_infere(input_image, face_model, face_device)
+    zeropaded_input_image = np.zeros((320, 320, 3))
+    zeropaded_input_image[: input_image.shape[0], :, :] = input_image[
+        : input_image.shape[0], :, :
+    ]
+
+    coords, face_mouth_coords = face_infere(
+        zeropaded_input_image, face_model, face_device
+    )
 
     # check if there is a face
     if isinstance(coords, int):
@@ -65,7 +74,6 @@ def GetFace(input_image, show=False, save=False, live=False):
     if save:
         cv2.imwrite("face.jpg", face_image)
     if show:
-
         cv2.imshow("face", face_image)
         cv2.waitKey()
     if live:
@@ -92,10 +100,11 @@ def GetMouth(face_image, face_coord, show=False, save=False, live=False):
     )
     landmarks = Mouth_predictor(image=face_image, box=face_rect)
     nplands = landmarks2numpy(landmarks, 68)
-    cv2.fillPoly(mask, [nplands[48:60]], color=(255, 255, 255))
+    cv2.fillPoly(mask, [nplands[48:60]], color=255)
 
     # remove noise and find coordination of bounding box by mask
     coords = mask_bb(mask)
+
     # check if there is't any coordinations
     if isinstance(coords, int):
         if not coords:
@@ -132,7 +141,6 @@ def Get_BoundingBox(
     returns tuple of mouth bounding box coordinations:
     ((x0, y0), (x1, y1))
     """
-
     global prev_or_coords, prev_face_mouth_coords, prev_frame, new_time, prev_time
 
     # resize image
@@ -258,7 +266,7 @@ def Get_BoundingBox(
         # show bboxes and mouth landmarks
         input_image = show_boxes(input_image, mouth_coords, face_mouth_coords)
         if save:
-            cv2.imwrite("result.jpg", input_image)
+            cv2.imwrite("result", input_image)
         if show:
             cv2.namedWindow("result", cv2.WINDOW_NORMAL)
             cv2.imshow("result", input_image)
@@ -279,44 +287,147 @@ def Get_BoundingBox(
             )
             cv2.imshow("result", input_image)
             cv2.waitKey(1)
+
     return or_coords
 
 
-############################ ▼ Load Model for first time ▼ ############################
-print("Loading an empty frame for the first time -> should be dropped", end="\r")
+# ############################ ▼ Load Model for first time ▼ ############################
 Get_BoundingBox(np.zeros((640, 480, 3), dtype=np.uint8))  # initial loading is slower
-print("All models are loaded now -> Ready ...\n")
-############################ ▲ Load Model for first time ▲ ############################
+# ############################ ▲ Load Model for first time ▲ ############################
 
 if __name__ == "__main__":  # not suited for dockerized run
     import os
     from tqdm import tqdm
 
-    BASE_PATH = "/mnt/DATA/@Swab/Datasets/CelebAMask-HQ/CelebA-HQ-img/"
-    # BASE_PATH = "/mnt/DATA/@Swab/Datasets/OpenMouth-320x240/front/images/"
-    # OUTPUT_PATH = "/home/entezari/swab/openmouth320/front/"
-    files = os.listdir(BASE_PATH)
-    image_path_list = [BASE_PATH + file for file in files]
-    image_path_list = image_path_list[0:5000]
+    # image_path_list = []
+    # BASE_PATH = "/mnt/DATA/@Swab/Datasets/llr_tof_images"
+    # LABEL_PATH = "/home/entezari/llr_tof_images/labels/"
+    # folders = [x[0] for x in os.walk(BASE_PATH)]
+    # for folder in folders:
+    #     files = os.listdir(folder)
+    #     for file in files:
+    #         if file.endswith(".png"):
+    #             image_path_list.append([folder + "/" + file, LABEL_PATH + file])
+
+    # for image_path, name in tqdm(image_path_list):
+    #     if not image_path.endswith(".png"):
+    #         continue
+    #     try:
+    #         image = cv2.imread(image_path)
+    #         # print(image_path, name)
+    #         image = cv2.resize(image, (640, 480), interpolation=cv2.INTER_AREA)
+    #         image_list.append((image, name))
+    #     except Exception:
+    #         continue
+    #     # print(image_path, name)
+
+    BASE_PATH = "/home/entezari/Videos/frames/"
     image_list = []
-    no_detected = 0
+    new_time = 0
+    prev_time = 0
+    fps_list = []
 
-    for image_path in tqdm(image_path_list):
-        image_list.append(cv2.imread(image_path))
+    files = os.listdir(BASE_PATH)
+    for file in files:
+        if file.endswith(".jpg"):
+            image = cv2.imread(BASE_PATH + file)
+            image = cv2.resize(image, (640, 480), interpolation=cv2.INTER_AREA)
+            image_list.append(image)
 
-    time0 = time.time()
-    for i, image in enumerate(image_list):
-        points = Get_BoundingBox(
-            image, background_subtract=False, clahe_histogram=False
-        )
-        if points:  # bounding box is found
-            # cv2.imwrite(
-            #     OUTPUT_PATH + str(i) + ".png",
-            #     cv2.rectangle(image, points[0], points[1], (0, 0, 255), 2),
-            # )
-            pass
-        else:
-            no_detected += 1
-    time1 = time.time()
-    print("time", (time1 - time0) / 5000)
-    print("not detected:", no_detected)
+    for image in tqdm(image_list):
+        new_time = time.time()
+        fps = 1 / (new_time - prev_time)
+        fps_list.append(fps)
+        Get_BoundingBox(image, background_subtract=True)
+        prev_time = new_time
+
+    # print(fps_list)
+    fps_list = np.array(fps_list)
+    print("FPS avg:", np.average(fps_list))
+    # VIDEO_PATH = "/home/entezari/Videos/frames/videoplayback.mp4"
+
+    # new_time = 0
+    # prev_time = 0
+    # cap = cv2.VideoCapture(VIDEO_PATH)
+
+    # while cap.isOpened():
+    #     # Capture frame-by-frame
+    #     ret, current_frame = cap.read()
+    #     if type(current_frame) == type(None):
+    #         print("!!! Couldn't read frame!")
+    #         break
+
+    #     # Display the resulting frame
+    #     new_time = time.time()
+    #     fps = 1 / (new_time - prev_time)
+    #     prev_time = new_time
+    #     print("HIIIIII")
+    #     Get_BoundingBox(current_frame, background_subtract=True)
+    #     print("FPS:", fps, "Hz    ", end="\r")
+
+    # cap.release()
+
+    # for i in range(n):
+    #     image_list.append(
+    #         cv2.resize(
+    #             cv2.imread("input.jpg"),
+    #             (640, 480),
+    #         )
+    #     )
+
+    # image_path_list = full_image_path_list[0:5000]
+    # for image_path in tqdm(image_path_list):
+    #     if not image_path.endswith(".jpg"):
+    #         continue
+    #     image = cv2.imread(image_path)
+    #     image = cv2.resize(image, (320, 240))
+    #     image_list.append(image)
+
+    # print(len(image_list))
+    # for image in tqdm(image_list):
+    #     Get_BoundingBox(image, live=True)
+
+    # for i in range(n):
+    #     pipeline_time0 = time.time()
+    #     Get_BoundingBox(image_list[i])
+    #     pipeline_time.append(time.time() - pipeline_time0)
+
+    # face_time.pop(0)
+    # pipeline_time.pop(0)
+    # face_time = np.array(face_time)
+    # pipeline_time = np.array(pipeline_time)
+    # print("face_time avg", np.average(face_time))
+    # print("pipeline_time avg", np.average(pipeline_time))
+    # print("face_time min", np.min(face_time))
+    # print("pipeline_time min", np.min(pipeline_time))
+    # import os
+    # from tqdm import tqdm
+
+    # BASE_PATH = "/mnt/DATA/@Swab/Datasets/CelebAMask-HQ/CelebA-HQ-img/"
+    # # BASE_PATH = "/mnt/DATA/@Swab/Datasets/OpenMouth-320x240/front/images/"
+    # # OUTPUT_PATH = "/home/entezari/swab/openmouth320/front/"
+    # files = os.listdir(BASE_PATH)
+    # image_path_list = [BASE_PATH + file for file in files]
+    # image_path_list = image_path_list[0:5000]
+    # image_list = []
+    # no_detected = 0
+
+    # for image_path in tqdm(image_path_list):
+    #     image_list.append(cv2.imread(image_path))
+
+    # time0 = time.time()
+    # for i, image in enumerate(image_list):
+    #     points = Get_BoundingBox(
+    #         image, background_subtract=False, clahe_histogram=False
+    #     )
+    #     if points:  # bounding box is found
+    #         # cv2.imwrite(
+    #         #     OUTPUT_PATH + str(i) + ".png",
+    #         #     cv2.rectangle(image, points[0], points[1], (0, 0, 255), 2),
+    #         # )
+    #         pass
+    #     else:
+    #         no_detected += 1
+    # time1 = time.time()
+    # print("time", (time1 - time0) / 5000)
+    # print("not detected:", no_detected)
