@@ -69,7 +69,7 @@ If you see the message `output.jpg is written`, it means that everything is work
 
 The first time that the code is run, model is downloaded automatically. Every time that the code restarts, it checks for model updates.
 
-### TensorRT
+## TensorRT
 
 To use TensorRT model you have to build TensorRT engine in your device.
 ```bash
